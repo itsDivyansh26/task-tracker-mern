@@ -1,5 +1,4 @@
 import mongoose from 'mongoose';
-import { MongoMemoryServer } from 'mongodb-memory-server';
 import dotenv from 'dotenv';
 import Task from '../models/Task.js';
 
@@ -83,19 +82,15 @@ const seedTasks = async () => {
 
 export const connectDB = async () => {
   try {
-    let mongoUri = process.env.MONGO_URI;
+    const mongoUri = process.env.MONGO_URI;
 
     if (!mongoUri) {
-      console.log('No MONGO_URI specified. Starting mongodb-memory-server...');
-      mongoServer = await MongoMemoryServer.create();
-      mongoUri = mongoServer.getUri();
-      console.log(`In-memory MongoDB started at: ${mongoUri}`);
+      throw new Error("MONGO_URI is not defined");
     }
 
     const conn = await mongoose.connect(mongoUri);
     console.log(`MongoDB Connected: ${conn.connection.host}`);
-    
-    // Seed the database with mock tasks
+
     await seedTasks();
   } catch (error) {
     console.error(`Database Connection Error: ${error.message}`);
