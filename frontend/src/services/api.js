@@ -1,68 +1,91 @@
-import axios from 'axios';
+import axios from "axios";
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
-
-const client = axios.create({
-  baseURL: API_BASE_URL,
-});
-
-// Interceptor to inject JWT from localStorage
-client.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
-  }
-);
+const API_BASE_URL =
+  import.meta.env.VITE_API_URL ||
+  "https://task-tracker-backend-ipdm.onrender.com/api";
 
 export const api = {
-  // Auth Services
-  login: async (credentials) => {
-    const response = await client.post('/auth/login', credentials);
-    return response.data;
-  },
 
   register: async (userData) => {
-    const response = await client.post('/auth/register', userData);
+    const response = await axios.post(
+      `${API_BASE_URL}/auth/register`,
+      userData
+    );
     return response.data;
   },
 
-  getMe: async () => {
-    const response = await client.get('/auth/me');
+  login: async (userData) => {
+    const response = await axios.post(
+      `${API_BASE_URL}/auth/login`,
+      userData
+    );
     return response.data;
   },
 
-  // Task Services
   getTasks: async (filters = {}) => {
-    // Clean up empty filters
+    const token = localStorage.getItem("token");
+
     const params = {};
     Object.keys(filters).forEach((key) => {
-      if (filters[key] !== undefined && filters[key] !== '') {
+      if (filters[key] !== undefined && filters[key] !== "") {
         params[key] = filters[key];
       }
     });
 
-    const response = await client.get('/tasks', { params });
+    const response = await axios.get(`${API_BASE_URL}/tasks`, {
+      params,
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
     return response.data;
   },
 
   createTask: async (taskData) => {
-    const response = await client.post('/tasks', taskData);
+    const token = localStorage.getItem("token");
+
+    const response = await axios.post(
+      `${API_BASE_URL}/tasks`,
+      taskData,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
     return response.data;
   },
 
   updateTask: async (id, taskData) => {
-    const response = await client.put(`/tasks/${id}`, taskData);
+    const token = localStorage.getItem("token");
+
+    const response = await axios.put(
+      `${API_BASE_URL}/tasks/${id}`,
+      taskData,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
     return response.data;
   },
 
   deleteTask: async (id) => {
-    const response = await client.delete(`/tasks/${id}`);
+    const token = localStorage.getItem("token");
+
+    const response = await axios.delete(
+      `${API_BASE_URL}/tasks/${id}`,
+      {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
     return response.data;
   },
 };
