@@ -5,7 +5,7 @@ export const getTasks = async (req, res, next) => {
   try {
     const { status, priority, q, sortBy, sortOrder } = req.query;
 
-    const query = {};
+    const query = { user: req.user._id };
 
     // Filtering by status
     if (status) {
@@ -53,6 +53,7 @@ export const createTask = async (req, res, next) => {
       status,
       priority,
       dueDate: dueDate || null,
+      user: req.user._id,
     });
 
     const savedTask = await task.save();
@@ -74,6 +75,11 @@ export const updateTask = async (req, res, next) => {
       return res.status(404).json({ error: 'Task not found' });
     }
 
+    // Check if task belongs to user
+    if (task.user.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ error: 'Not authorized to update this task' });
+    }
+
     // Update fields if provided
     if (title !== undefined) task.title = title;
     if (description !== undefined) task.description = description;
@@ -92,11 +98,18 @@ export const updateTask = async (req, res, next) => {
 export const deleteTask = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const task = await Task.findByIdAndDelete(id);
+    const task = await Task.findById(id);
 
     if (!task) {
       return res.status(404).json({ error: 'Task not found' });
     }
+
+    // Check if task belongs to user
+    if (task.user.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ error: 'Not authorized to delete this task' });
+    }
+
+    await task.deleteOne();
 
     res.status(200).json({ message: 'Task deleted successfully', id });
   } catch (error) {

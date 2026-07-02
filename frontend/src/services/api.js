@@ -1,8 +1,43 @@
 import axios from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api/tasks';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
+
+const client = axios.create({
+  baseURL: API_BASE_URL,
+});
+
+// Interceptor to inject JWT from localStorage
+client.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
+  (error) => {
+    return Promise.reject(error);
+  }
+);
 
 export const api = {
+  // Auth Services
+  login: async (credentials) => {
+    const response = await client.post('/auth/login', credentials);
+    return response.data;
+  },
+
+  register: async (userData) => {
+    const response = await client.post('/auth/register', userData);
+    return response.data;
+  },
+
+  getMe: async () => {
+    const response = await client.get('/auth/me');
+    return response.data;
+  },
+
+  // Task Services
   getTasks: async (filters = {}) => {
     // Clean up empty filters
     const params = {};
@@ -12,22 +47,22 @@ export const api = {
       }
     });
 
-    const response = await axios.get(API_BASE_URL, { params });
+    const response = await client.get('/tasks', { params });
     return response.data;
   },
 
   createTask: async (taskData) => {
-    const response = await axios.post(API_BASE_URL, taskData);
+    const response = await client.post('/tasks', taskData);
     return response.data;
   },
 
   updateTask: async (id, taskData) => {
-    const response = await axios.put(`${API_BASE_URL}/${id}`, taskData);
+    const response = await client.put(`/tasks/${id}`, taskData);
     return response.data;
   },
 
   deleteTask: async (id) => {
-    const response = await axios.delete(`${API_BASE_URL}/${id}`);
+    const response = await client.delete(`/tasks/${id}`);
     return response.data;
   },
 };

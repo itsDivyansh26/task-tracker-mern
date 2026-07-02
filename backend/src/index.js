@@ -3,6 +3,7 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import { connectDB } from './config/db.js';
 import taskRoutes from './routes/taskRoutes.js';
+import authRoutes from './routes/authRoutes.js';
 import { errorHandler } from './middleware/errorHandler.js';
 
 dotenv.config();
@@ -19,6 +20,7 @@ app.use(express.json());
 
 // API Routes
 app.use('/api/tasks', taskRoutes);
+app.use('/api/auth', authRoutes);
 
 // Base route for connectivity check
 app.get('/', (req, res) => {

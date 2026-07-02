@@ -30,6 +30,11 @@ const taskSchema = new mongoose.Schema(
       },
       default: 'medium',
     },
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      required: [true, 'Task must belong to a user'],
+    },
     dueDate: {
       type: Date,
       default: null,
@@ -40,8 +45,8 @@ const taskSchema = new mongoose.Schema(
   }
 );
 
-// Index for query optimization
-taskSchema.index({ status: 1, priority: 1, dueDate: 1, createdAt: -1 });
+// Index for query optimization (including user)
+taskSchema.index({ user: 1, status: 1, priority: 1, dueDate: 1, createdAt: -1 });
 
 const Task = mongoose.model('Task', taskSchema);
 

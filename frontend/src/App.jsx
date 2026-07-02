@@ -5,15 +5,23 @@ import Dashboard from './components/Dashboard';
 import TaskForm from './components/TaskForm';
 import TaskList from './components/TaskList';
 import Toast from './components/Toast';
+import Auth from './components/Auth';
 
 function App() {
   const [tasks, setTasks] = useState([]); // Filtered tasks shown in list
   const [allTasks, setAllTasks] = useState([]); // All tasks for dashboard statistics
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   
   const [editingTask, setEditingTask] = useState(null);
   const [toasts, setToasts] = useState([]);
+
+  // Auth state
+  const [token, setToken] = useState(() => localStorage.getItem('token') || '');
+  const [user, setUser] = useState(() => {
+    const savedUser = localStorage.getItem('user');
+    return savedUser ? JSON.parse(savedUser) : null;
+  });
 
   // Theme state
   const [theme, setTheme] = useState(() => {
@@ -28,6 +36,39 @@ function App() {
     sortBy: 'createdAt',
     sortOrder: 'desc',
   });
+
+  // Logout Handler
+  const handleLogout = () => {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    setToken('');
+    setUser(null);
+    setTasks([]);
+    setAllTasks([]);
+    addToast('Logged out successfully', 'success');
+  };
+
+  // Auth Success Handler
+  const handleAuthSuccess = (authData) => {
+    setToken(authData.token);
+    setUser({ _id: authData._id, username: authData.username });
+  };
+
+  // Validate token on mount
+  useEffect(() => {
+    const validateToken = async () => {
+      if (token) {
+        try {
+          const userData = await api.getMe();
+          setUser(userData);
+        } catch (err) {
+          console.error('Session expired or invalid token:', err);
+          handleLogout();
+        }
+      }
+    };
+    validateToken();
+  }, [token]);
 
   // Apply theme
   useEffect(() => {
@@ -76,9 +117,11 @@ function App() {
 
   // Load data on start & when filters change
   useEffect(() => {
-    fetchFilteredTasks();
-    fetchAllTasks();
-  }, [filters]);
+    if (token) {
+      fetchFilteredTasks();
+      fetchAllTasks();
+    }
+  }, [filters, token]);
 
   // Handle task submission (create or update)
   const handleFormSubmit = async (taskData) => {
@@ -181,37 +224,70 @@ function App() {
           <h1 className="logo-text">TaskFlow</h1>
         </div>
         
-        <button className="theme-toggle-btn" onClick={toggleTheme} title="Toggle theme">
-          {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
-        </button>
+        <div className="header-actions" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+          {token && user && (
+            <div className="user-profile" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+              <span className="welcome-text" style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
+                Hi, <strong style={{ color: 'var(--text-primary)' }}>{user.username}</strong>
+              </span>
+              <button 
+                onClick={handleLogout} 
+                className="btn btn-secondary" 
+                style={{ 
+                  padding: '0.4rem 0.8rem', 
+                  fontSize: '0.85rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.3rem',
+                  background: 'var(--bg-surface)',
+                  border: '1px solid var(--border-color)',
+                  color: 'var(--text-primary)',
+                  borderRadius: 'var(--radius-sm)',
+                  cursor: 'pointer'
+                }}
+              >
+                Logout
+              </button>
+            </div>
+          )}
+          <button className="theme-toggle-btn" onClick={toggleTheme} title="Toggle theme">
+            {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
+          </button>
+        </div>
       </header>
 
-      {/* Overview Dashboard stats */}
-      <Dashboard tasks={allTasks} />
+      {!token ? (
+        <Auth onAuthSuccess={handleAuthSuccess} />
+      ) : (
+        <>
+          {/* Overview Dashboard stats */}
+          <Dashboard tasks={allTasks} />
 
-      {/* Main Form & List Grid */}
-      <main className="main-content">
-        <section>
-          <TaskForm
-            onSubmit={handleFormSubmit}
-            editingTask={editingTask}
-            onCancelEdit={handleCancelEdit}
-          />
-        </section>
-        
-        <section>
-          <TaskList
-            tasks={tasks}
-            loading={loading}
-            error={error}
-            filters={filters}
-            onFilterChange={handleFilterChange}
-            onEdit={handleEditClick}
-            onDelete={handleDeleteTask}
-            onStatusChange={handleStatusChange}
-          />
-        </section>
-      </main>
+          {/* Main Form & List Grid */}
+          <main className="main-content">
+            <section>
+              <TaskForm
+                onSubmit={handleFormSubmit}
+                editingTask={editingTask}
+                onCancelEdit={handleCancelEdit}
+              />
+            </section>
+            
+            <section>
+              <TaskList
+                tasks={tasks}
+                loading={loading}
+                error={error}
+                filters={filters}
+                onFilterChange={handleFilterChange}
+                onEdit={handleEditClick}
+                onDelete={handleDeleteTask}
+                onStatusChange={handleStatusChange}
+              />
+            </section>
+          </main>
+        </>
+      )}
 
       {/* Notification Toast Manager */}
       <Toast toasts={toasts} removeToast={removeToast} />
